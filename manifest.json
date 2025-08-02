@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "DSA Buddy",
+  "version": "1.0.0",
+  "description": "Your companion for Data Structures and Algorithms learning - quick reference, practice problems, and study tools",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/*",
+        "https://hackerrank.com/*",
+        "https://geeksforgeeks.org/*"
+      ],
+      "js": ["content.js"],
+      "css": ["assets/main-CGTQkvNv.css"]
+    }
+  ],
+  "host_permissions": [
+    "https://leetcode.com/*",
+    "https://hackerrank.com/*",
+    "https://geeksforgeeks.org/*"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "DSA Buddy"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["assets/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+D",
+        "mac": "Command+Shift+D"
+      },
+      "description": "Open DSA Buddy"
+    }
+  },
+  "icons": {
+    "16": "icons/data.png",
+    "48": "icons/diagram.png",
+    "128": "icons/hierarchical-structure.png"
+  }
+}
