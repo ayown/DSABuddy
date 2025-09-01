@@ -662,7 +662,7 @@ const ContentPage: React.FC = () => {
                       <p>you can select another models</p>
                       <Select
                         onValueChange={(v: ValidModel) => heandelModel(v)}
-                        value={selectedModel}
+                        value={selectedModel || ''} // Add fallback to empty string
                       >
                         <SelectTrigger className="w-56">
                           <SelectValue placeholder="Select a model" />

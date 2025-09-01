@@ -108,7 +108,7 @@ const Popup: React.FC = () => {
               </label>
               <Select
                 onValueChange={(v: ValidModel) => heandelModel(v)}
-                value={selectedModel}
+                value={selectedModel || ''} // Add fallback to empty string
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a model" />
