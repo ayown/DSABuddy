@@ -29,7 +29,7 @@ const Popup: React.FC = () => {
     message: string
   } | null>(null)
 
-  const [selectedModel, setSelectedModel] = useState<ValidModel>()
+  const [selectedModel, setSelectedModel] = useState<ValidModel | ''>('')
 
   const updatestorage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()

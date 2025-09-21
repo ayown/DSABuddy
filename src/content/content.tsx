@@ -67,7 +67,7 @@ interface ChatBoxProps {
   model: ValidModel
   apikey: string
   heandelModel: (v: ValidModel) => void
-  selectedModel: ValidModel | undefined
+  selectedModel: ValidModel | undefined | '' // Add empty string to the type
 }
 
 const ChatBox: React.FC<ChatBoxProps> = ({
@@ -572,7 +572,7 @@ const ContentPage: React.FC = () => {
 
   const [modal, setModal] = React.useState<ValidModel | null | undefined>(null)
   const [apiKey, setApiKey] = React.useState<string | null | undefined>(null)
-  const [selectedModel, setSelectedModel] = React.useState<ValidModel>()
+  const [selectedModel, setSelectedModel] = React.useState<ValidModel | undefined>(undefined)
 
   const ref = useRef<HTMLDivElement>(null)
 
@@ -630,75 +630,74 @@ const ContentPage: React.FC = () => {
         right: '30px',
       }}
     >
-      {!modal || !apiKey ? (
-        !chatboxExpanded ? null : (
-          <>
-            <Card className="mb-5">
-              <CardContent className="h-[500px] grid place-items-center">
-                <div className="grid place-items-center gap-4">
-                  {!selectedModel && (
-                    <>
-                      <p className="text-center">
-                        Please configure the extension before using this
-                        feature.
-                      </p>
-                      <Button
-                        onClick={() => {
-                          chrome.runtime.sendMessage({ action: 'openPopup' })
-                        }}
-                      >
-                        configure
-                      </Button>
-                    </>
-                  )}
-                  {selectedModel && (
-                    <>
-                      <p>
-                        We couldn't find any API key for selected model{' '}
-                        <b>
-                          <u>{selectedModel}</u>
-                        </b>
-                      </p>
-                      <p>you can select another models</p>
-                      <Select
-                        onValueChange={(v: ValidModel) => heandelModel(v)}
-                        value={selectedModel || ''} // Add fallback to empty string
-                      >
-                        <SelectTrigger className="w-56">
-                          <SelectValue placeholder="Select a model" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectLabel>Model</SelectLabel>
-                            <SelectSeparator />
-                            {VALID_MODELS.map((modelOption) => (
-                              <SelectItem
-                                key={modelOption.name}
-                                value={modelOption.name}
-                              >
-                                {modelOption.display}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </>
+      {chatboxExpanded && (
+        !modal || !apiKey ? (
+          <Card className="mb-5">
+            <CardContent className="h-[500px] grid place-items-center">
+              <div className="grid place-items-center gap-4">
+                {!selectedModel && (
+                  <>
+                    <p className="text-center">
+                      Please configure the extension before using this
+                      feature.
+                    </p>
+                    <Button
+                      onClick={() => {
+                        chrome.runtime.sendMessage({ action: 'openPopup' })
+                      }}
+                    >
+                      configure
+                    </Button>
+                  </>
+                )}
+                {selectedModel && (
+                  <>
+                    <p>
+                      We couldn't find any API key for selected model{' '}
+                      <b>
+                        <u>{selectedModel}</u>
+                      </b>
+                    </p>
+                    <p>you can select another models</p>
+                    <Select
+                      onValueChange={(v: ValidModel) => heandelModel(v)}
+                      value={selectedModel || ''}
+                    >
+                      <SelectTrigger className="w-56">
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Model</SelectLabel>
+                          <SelectSeparator />
+                          {VALID_MODELS.map((modelOption) => (
+                            <SelectItem
+                              key={modelOption.name}
+                              value={modelOption.name}
+                            >
+                              {modelOption.display}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <ChatBox
+            visible={chatboxExpanded}
+            context={{ problemStatement }}
+            model={modal}
+            apikey={apiKey}
+            heandelModel={heandelModel}
+            selectedModel={selectedModel}
+          />
         )
-      ) : (
-        <ChatBox
-          visible={chatboxExpanded}
-          context={{ problemStatement }}
-          model={modal}
-          apikey={apiKey}
-          heandelModel={heandelModel}
-          selectedModel={selectedModel}
-        />
       )}
+      {/* Bot button should ALWAYS be visible */}
       <div className="flex justify-end">
         <Button
           size={'icon'}
@@ -708,7 +707,7 @@ const ContentPage: React.FC = () => {
         </Button>
       </div>
     </div>
-  )
+)
 }
 
 export default ContentPage
