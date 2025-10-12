@@ -14,7 +14,7 @@ import {
   SelectValue,
   SelectTrigger,
 } from '@/components/ui/select'
-import { VALID_MODELS, type ValidModel } from './constants/valid_modals'
+import { VALID_MODELS } from './constants/valid_modals'
 import { HideApiKey } from '@/components/ui/input'
 import { useChromeStorage } from './hooks/useChromeStorage'
 
@@ -45,7 +45,7 @@ const Popup: React.FC = () => {
         state: 'success',
         message: 'API Key saved successfully',
       })
-    } catch (error: any) {
+    } catch (error) {
       setSubmitMessage({
         state: 'error',
         message: error.message,

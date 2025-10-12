@@ -2,7 +2,6 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
-// https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -15,7 +14,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        content: path.resolve(__dirname, 'src/content/content.tsx'), // Changed this line
+        content: path.resolve(__dirname, 'src/content/content.jsx'),
         background: path.resolve(__dirname, 'src/background.js')
       },
       output: {

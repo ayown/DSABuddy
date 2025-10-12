@@ -27,7 +27,7 @@ export interface ChatHistory {
  * @param historyString - The raw chat history string to parse.
  * @returns An array of parsed chat history messages.
  */
-export function parseChatHistory(historyString: string): ChatHistoryParsed[] {
+export function parseChatHistory(historyString) {
   try {
     const parsed = JSON.parse(historyString)
     return Array.isArray(parsed) ? parsed : []

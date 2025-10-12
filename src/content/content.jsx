@@ -79,21 +79,14 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   selectedModel,
 }) => {
   const [value, setValue] = React.useState('')
-  const [chatHistory, setChatHistory] = React.useState<ChatHistoryParsed[]>([])
-  const [priviousChatHistory, setPreviousChatHistory] = React.useState<
-    ChatHistoryParsed[]
-  >([])
-  const [isResponseLoading, setIsResponseLoading] =
-    React.useState<boolean>(false)
-  // const chatBoxRef = useRef<HTMLDivElement>(null)
-
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
-  const lastMessageRef = useRef<HTMLDivElement>(null)
-
-  const [offset, setOffset] = React.useState<number>(0)
-  const [totalMessages, setTotalMessages] = React.useState<number>(0)
-  const [isPriviousMsgLoading, setIsPriviousMsgLoading] =
-    React.useState<boolean>(false)
+  const [chatHistory, setChatHistory] = React.useState([])
+  const [priviousChatHistory, setPreviousChatHistory] = React.useState([])
+  const [isResponseLoading, setIsResponseLoading] = React.useState(false)
+  const scrollAreaRef = useRef(null)
+  const lastMessageRef = useRef(null)
+  const [offset, setOffset] = React.useState(0)
+  const [totalMessages, setTotalMessages] = React.useState(0)
+  const [isPriviousMsgLoading, setIsPriviousMsgLoading] = React.useState(false)
   const { fetchChatHistory, saveChatHistory } = useIndexDB()
 
   const getProblemName = () => {
@@ -651,36 +644,35 @@ const ContentPage: React.FC = () => {
                   </>
                 )}
                 {selectedModel && (
-                  <>
-                    <p>
-                      We couldn't find any API key for selected model{' '}
-                      <b>
-                        <u>{selectedModel}</u>
-                      </b>
-                    </p>
-                    <p>you can select another models</p>
-                    <Select
-                      onValueChange={(v: ValidModel) => heandelModel(v)}
-                      value={selectedModel || ''}
-                    >
-                      <SelectTrigger className="w-56">
-                        <SelectValue placeholder="Select a model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectLabel>Model</SelectLabel>
-                          <SelectSeparator />
-                          {VALID_MODELS.map((modelOption) => (
-                            <SelectItem
-                              key={modelOption.name}
-                              value={modelOption.name}
-                            >
-                              {modelOption.display}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
+                  <p>
+                    We couldn't find any API key for selected model{' '}
+                    <b>
+                      <u>{selectedModel}</u>
+                    </b>
+                  </p>
+                  <p>you can select another models</p>
+                  <Select
+                    onValueChange={(v: ValidModel) => heandelModel(v)}
+                    value={selectedModel || ''}
+                  >
+                    <SelectTrigger className="w-56">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel>Model</SelectLabel>
+                        <SelectSeparator />
+                        {VALID_MODELS.map((modelOption) => (
+                          <SelectItem
+                            key={modelOption.name}
+                            value={modelOption.name}
+                          >
+                            {modelOption.display}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                   </>
                 )}
               </div>
