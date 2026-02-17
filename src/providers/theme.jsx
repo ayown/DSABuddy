@@ -12,13 +12,7 @@ import React from "react";
  * @property {boolean} [enableSystem=true] - Whether to enable system theme detection.
  * @property {boolean} [disableTransitionOnChange=true] - Whether to disable transitions when changing themes.
  */
-export interface ThemeProviderProps {
-  children: React.ReactNode;
-  attribute?: "class" | "data-theme" | "data-mode" | [string, string];
-  defaultTheme?: string;
-  enableSystem?: boolean;
-  disableTransitionOnChange?: boolean;
-}
+// TypeScript interface removed; using plain JS props.
 
 
 /**
@@ -27,7 +21,7 @@ export interface ThemeProviderProps {
  * @param {ThemeProviderProps} props - The component properties.
  * @returns {React.ReactElement} - The theme provider component.
  */
-export const ThemeProvider: React.FC<ThemeProviderProps> = ({
+export const ThemeProvider = ({
   children,
   attribute = "class",
   defaultTheme = "dark",
@@ -36,7 +30,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
 }) => {
   return (
     <NextThemeProvider
-      attribute={attribute as "class" | "data-theme" | "data-mode"}
+      attribute={attribute}
       defaultTheme={defaultTheme}
       enableSystem={enableSystem}
       disableTransitionOnChange={disableTransitionOnChange}

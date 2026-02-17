@@ -1,6 +1,6 @@
 # DSA Buddy
 
-DSA Buddy is a Chrome extension designed to help users practice and learn Data Structures and Algorithms (DSA) efficiently. Built with React, TypeScript, and Vite, it offers an interactive interface, curated resources, and productivity tools for DSA enthusiasts.
+DSA Buddy is a Chrome extension designed to help users practice and learn Data Structures and Algorithms (DSA) efficiently. Built with React and Vite (JavaScript-only), it offers an interactive interface, curated resources, and productivity tools for DSA enthusiasts.
 
 ## Features
 
@@ -63,23 +63,23 @@ DSABuddy/
 │   ├── constants/      # Constant values
 │   ├── content/        # Content scripts
 │   ├── hooks/          # Custom React hooks
-│   ├── interface/      # TypeScript interfaces/types
-│   ├── App.tsx         # Main App component
+│   ├── interface/      # Shared JS interfaces/types (runtime)
+│   ├── App.jsx         # Main App component
 │   ├── background.js   # Chrome extension background script
-│   ├── content.tsx     # Content script entry
-│   ├── main.tsx        # App entry point
+│   ├── content.jsx     # Content script entry
+│   ├── main.jsx        # App entry point
 │   └── index.css       # Global styles
 ├── index.html
 ├── manifest.json
 ├── package.json
 ├── tailwind.config.js
-├── vite.config.ts
+├── vite.config.js
 └── ...
 ```
 
 ## Linting & Formatting
 
-- **ESLint** is configured for type-aware linting.
+- **ESLint** is configured for JavaScript/JSX.
 - **Prettier** is used for code formatting.
 
 ## License
@@ -88,4 +88,4 @@ DSABuddy/
 
 ---
 
-Made with ❤️ using React, TypeScript, and Vite.
+Made with ❤️ using React and Vite.

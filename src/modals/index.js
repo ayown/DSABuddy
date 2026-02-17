@@ -1,5 +1,4 @@
 import { ModalInterface } from '@/interface/ModalInterface'
-import type { ValidModel } from '@/constants/valid_modals'
 
 import { OpenAI_3_5_turbo } from '@/modals/modal/OpenAI_3_5_turbo'
 import { GeminiAI_1_5_pro } from '@/modals/modal/GeminiAI_1_5_pro'

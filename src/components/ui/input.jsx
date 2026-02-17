@@ -4,47 +4,7 @@ import * as React from 'react'
 import { cn } from '@/lib/utils'
 import { EyeClosedIcon, EyeOpenIcon } from '@radix-ui/react-icons'
 
-/**
- * Props for the Input component.
- */
-export interface InputProps
-  extends Omit<
-    React.InputHTMLAttributes<HTMLInputElement>,
-    'children' | 'prefix' | 'suffix'
-  > {
-  /**
-   * Additional class names to apply to the outer container.
-   */
-  className?: string
-  /**
-   * Additional class names to apply to the input element.
-   */
-  iclassName?: string
-  /**
-   * Node or string to render as prefix inside the input container.
-   */
-  prefix?: React.ReactNode | string
-  /**
-   * Node or string to render as suffix inside the input container.
-   */
-  suffix?: React.ReactNode | string
-  /**
-   * Flag to apply styling to the prefix.
-   */
-  prefixStyling?: boolean
-  /**
-   * Label for the input element.
-   */
-  label?: string
-  /**
-   * Flag to apply styling to the suffix.
-   */
-  suffixStyling?: boolean
-  /**
-   * error - Error message to display below the input.
-   */
-  error?: string
-}
+// TypeScript interface removed; using plain JS props.
 /**
  * Input component with optional prefix and suffix.
  *
@@ -61,8 +21,8 @@ export interface InputProps
  * @param ref - Ref to the input element.
  */
 const Input = React.forwardRef(({ className, iclassName, prefix, suffix, prefixStyling = false, label, suffixStyling = false, error, type = 'text', ...props }, ref) => {
-  const prefixRef = React.useRef<HTMLDivElement>(null)
-  const suffixRef = React.useRef<HTMLDivElement>(null)
+  const prefixRef = React.useRef(null)
+  const suffixRef = React.useRef(null)
   const [prefixWidth, setPrefixWidth] = React.useState(0)
   const [suffixWidth, setSuffixWidth] = React.useState(0)
   // Update the width of the prefix and suffix elements when they change
@@ -152,7 +112,7 @@ const Input = React.forwardRef(({ className, iclassName, prefix, suffix, prefixS
       )}
     </div>
   )
-}
+})
 
 Input.displayName = 'Input'
 

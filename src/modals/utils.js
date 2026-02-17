@@ -1,7 +1,6 @@
-import type { ChatHistoryParsed } from '@/interface/chatHistory'
 import { outputSchema } from '@/schema/modelOutput'
 import { generateObject } from 'ai'
-import type { GenerateObjectResult, LanguageModelV1 } from 'ai'
+// TypeScript type imports removed for JS-only project.
 
 /**
  * Generates an object response based on the provided parameters.
@@ -20,20 +19,7 @@ export const generateObjectResponce = async ({
   prompt,
   extractedCode,
   model,
-}: {
-  messages: ChatHistoryParsed[] | []
-  systemPrompt: string
-  prompt: string
-  extractedCode?: string
-  model: LanguageModelV1
-}): Promise<
-  GenerateObjectResult<{
-    feedback: string
-    hints?: string[] | undefined
-    snippet?: string | undefined
-    programmingLanguage?: string | undefined
-  }>
-> => {
+}) => {
   const data = await generateObject({
     model: model,
     schema: outputSchema,

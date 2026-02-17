@@ -26,9 +26,7 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card'
 import { ModalService } from '@/services/ModalService'
 import { useChromeStorage } from '@/hooks/useChromeStorage'
 
-import type { ChatHistoryParsed } from '@/interface/chatHistory'
 import { VALID_MODELS } from '@/constants/valid_modals'
-import type { ValidModel } from '@/constants/valid_modals'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -59,18 +57,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-interface ChatBoxProps {
-  visible: boolean
-  context: {
-    problemStatement: string
-  }
-  model: ValidModel
-  apikey: string
-  heandelModel: (v: ValidModel) => void
-  selectedModel: ValidModel | undefined | '' // Add empty string to the type
-}
+// TypeScript interface removed; using plain JS props.
 
-const ChatBox: React.FC<ChatBoxProps> = ({
+const ChatBox = ({
   context,
   visible,
   model,
@@ -96,7 +85,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   }
 
   const problemName = getProblemName()
-  const inputFieldRef = useRef<HTMLInputElement>(null)
+  const inputFieldRef = useRef(null)
 
   useEffect(() => {
     if (lastMessageRef.current && !isPriviousMsgLoading) {
@@ -131,7 +120,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
    * @function handleGenerateAIResponse
    * @returns {Promise<void>} A promise that resolves when the AI response generation is complete.
    */
-  const handleGenerateAIResponse = async (): Promise<void> => {
+  const handleGenerateAIResponse = async () => {
     const modalService = new ModalService()
 
     modalService.selectModal(model, apikey)
@@ -166,12 +155,12 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     })
 
     if (error) {
-      const errorMessage: ChatHistoryParsed = {
+      const errorMessage = {
         role: 'assistant',
         content: error.message,
         timestamp: Date.now(),
       }
-      const userMessage: ChatHistoryParsed = {
+      const userMessage = {
         role: 'user',
         content: value,
         timestamp: Date.now(),
@@ -182,20 +171,17 @@ const ChatBox: React.FC<ChatBoxProps> = ({
         errorMessage,
       ])
       setPreviousChatHistory((prev) => [...prev, userMessage, errorMessage])
-      setChatHistory((prev) => {
-        const updatedChatHistory: ChatHistoryParsed[] = [...prev, userMessage, errorMessage]
-        return updatedChatHistory
-      })
+      setChatHistory((prev) => [...prev, userMessage, errorMessage])
       lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
 
     if (success) {
-      const res: ChatHistoryParsed = {
+      const res = {
         role: 'assistant',
         content: typeof success === 'string' ? success : JSON.stringify(success),
         timestamp: Date.now(),
       }
-      const userMessage: ChatHistoryParsed = {
+      const userMessage = {
         role: 'user',
         content: value,
         timestamp: Date.now(),
@@ -252,7 +238,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     }, 500)
   }
 
-  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = (e) => {
     const target = e.currentTarget
     if (target.scrollTop === 0) {
       console.log('Reached the top, loading more messages...')
@@ -260,9 +246,9 @@ const ChatBox: React.FC<ChatBoxProps> = ({
     }
   }
 
-  const onSendMessage = async (value: string) => {
+  const onSendMessage = async (value) => {
     setIsResponseLoading(true)
-    const newMessage: ChatHistoryParsed = { 
+    const newMessage = { 
       role: 'user', 
       content: value,
       timestamp: Date.now()
@@ -315,7 +301,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                   <DropdownMenuSubContent>
                     <DropdownMenuRadioGroup
                       value={selectedModel}
-                      onValueChange={(v) => heandelModel(v as ValidModel)}
+                      onValueChange={(v) => heandelModel(v)}
                     >
                       {VALID_MODELS.map((modelOption) => (
                         <DropdownMenuRadioItem
@@ -409,7 +395,7 @@ const ChatBox: React.FC<ChatBoxProps> = ({
                                 {(() => {
                                   try {
                                     const parsedContent = JSON.parse(message.content)
-                                    return parsedContent?.hints?.map((e: string) => (
+                                    return parsedContent?.hints?.map((e) => (
                                       <li key={e}>{e}</li>
                                     ))
                                   } catch {
@@ -557,19 +543,19 @@ const ChatBox: React.FC<ChatBoxProps> = ({
   )
 }
 
-const ContentPage: React.FC = () => {
-  const [chatboxExpanded, setChatboxExpanded] = React.useState<boolean>(false)
+const ContentPage = () => {
+  const [chatboxExpanded, setChatboxExpanded] = React.useState(false)
 
   const metaDescriptionEl = document.querySelector('meta[name=description]')
-  const problemStatement = metaDescriptionEl?.getAttribute('content') as string
+  const problemStatement = metaDescriptionEl?.getAttribute('content') || ''
 
-  const [modal, setModal] = React.useState<ValidModel | null | undefined>(null)
-  const [apiKey, setApiKey] = React.useState<string | null | undefined>(null)
-  const [selectedModel, setSelectedModel] = React.useState<ValidModel | undefined>(undefined)
+  const [modal, setModal] = React.useState(null)
+  const [apiKey, setApiKey] = React.useState(null)
+  const [selectedModel, setSelectedModel] = React.useState(undefined)
 
-  const ref = useRef<HTMLDivElement>(null)
+  const ref = useRef(null)
 
-  const handleDocumentClick = (e: MouseEvent) => {
+  const handleDocumentClick = (e) => {
     if (
       ref.current &&
       e.target instanceof Node &&
@@ -593,7 +579,7 @@ const ContentPage: React.FC = () => {
     setApiKey(apiKey)
   })()
 
-  const heandelModel = (v: ValidModel) => {
+  const heandelModel = (v) => {
     if (v) {
       const { setSelectModel } = useChromeStorage()
       setSelectModel(v)
@@ -644,6 +630,7 @@ const ContentPage: React.FC = () => {
                   </>
                 )}
                 {selectedModel && (
+                  <>
                   <p>
                     We couldn't find any API key for selected model{' '}
                     <b>
@@ -652,7 +639,7 @@ const ContentPage: React.FC = () => {
                   </p>
                   <p>you can select another models</p>
                   <Select
-                    onValueChange={(v: ValidModel) => heandelModel(v)}
+                    onValueChange={(v) => heandelModel(v)}
                     value={selectedModel || ''}
                   >
                     <SelectTrigger className="w-56">

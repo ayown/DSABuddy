@@ -18,20 +18,17 @@ import { VALID_MODELS } from './constants/valid_modals'
 import { HideApiKey } from '@/components/ui/input'
 import { useChromeStorage } from './hooks/useChromeStorage'
 
-const Popup: React.FC = () => {
-  const [apikey, setApikey] = React.useState<string | null>(null)
-  const [model, setModel] = React.useState<ValidModel | null>(null)
-  const [isLoaded, setIsLoaded] = React.useState<boolean>(false)
+const Popup = () => {
+  const [apikey, setApikey] = React.useState(null)
+  const [model, setModel] = React.useState(null)
+  const [isLoaded, setIsLoaded] = React.useState(false)
 
-  const [isloading, setIsloading] = useState<boolean>(false)
-  const [submitMessage, setSubmitMessage] = useState<{
-    state: 'error' | 'success'
-    message: string
-  } | null>(null)
+  const [isloading, setIsloading] = useState(false)
+  const [submitMessage, setSubmitMessage] = useState(null)
 
-  const [selectedModel, setSelectedModel] = useState<ValidModel | ''>('')
+  const [selectedModel, setSelectedModel] = useState('')
 
-  const updatestorage = async (e: React.FormEvent<HTMLFormElement>) => {
+  const updatestorage = async (e) => {
     e.preventDefault()
     try {
       setIsloading(true)
@@ -71,7 +68,7 @@ const Popup: React.FC = () => {
     loadChromeStorage()
   }, [])
 
-  const heandelModel = async (v: ValidModel) => {
+  const heandelModel = async (v) => {
     if (v) {
       const { setSelectModel, getKeyModel, selectModel } = useChromeStorage()
       setSelectModel(v)
@@ -107,7 +104,7 @@ const Popup: React.FC = () => {
                 select a model
               </label>
               <Select
-                onValueChange={(v: ValidModel) => heandelModel(v)}
+                onValueChange={(v) => heandelModel(v)}
                 value={selectedModel || ''} // Add fallback to empty string
               >
                 <SelectTrigger className="w-full">

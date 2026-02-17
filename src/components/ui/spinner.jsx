@@ -1,21 +1,10 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-type SpinnerProps = React.ComponentPropsWithoutRef<"div"> & {
-  
-  className?: string;
-  
-  size?: number;
-};
+const Spinner = React.forwardRef(({ className, size, ...props }, ref) => {
+    const computeDelay = (i) => `${-1.2 + i * 0.1}s`;
 
-
-const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
-  ({ className, size, ...props }, ref) => {
-    
-    const computeDelay = (i: number): string => `${-1.2 + i * 0.1}s`;
-
-    
-    const computeRotation = (i: number): string => `${i * 30}deg`;
+    const computeRotation = (i) => `${i * 30}deg`;
 
     return (
       <div
@@ -43,8 +32,7 @@ const Spinner = React.forwardRef<HTMLDivElement, SpinnerProps>(
         </div>
       </div>
     );
-  },
-);
+});
 
 Spinner.displayName = "Spinner";
 

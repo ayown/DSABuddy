@@ -3,5 +3,4 @@ export const VALID_MODELS = [
   { model: 'gpt-4o', name: 'openai_4o', display: 'GPT-4 Optimized' },
   { model: 'gemini-1.5-pro-latest', name: 'gemini_1.5_pro', display: 'Gemini 1.5 Pro (Latest)' },
 ]
-
-export type ValidModel = 'openai_3.5_turbo' | 'openai_4o' | 'gemini_1.5_pro'
+// TypeScript type removed for JS-only project.

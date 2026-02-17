@@ -91,10 +91,7 @@ const SelectTrigger = React.forwardRef(({ className, children, ...props }, ref) 
 })
 SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
 
-const SelectScrollUpButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
->(({ className, ...props }, ref) => (
+const SelectScrollUpButton = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollUpButton
     ref={ref}
     className={cn(
@@ -108,10 +105,7 @@ const SelectScrollUpButton = React.forwardRef<
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
 
-const SelectScrollDownButton = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
->(({ className, ...props }, ref) => (
+const SelectScrollDownButton = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.ScrollDownButton
     ref={ref}
     className={cn(
@@ -127,12 +121,7 @@ SelectScrollDownButton.displayName =
   SelectPrimitive.ScrollDownButton.displayName
 
 // Animated SelectContent component
-const AnimatedSelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
-    selectedVariant: keyof typeof selectAnimationVariants
-  }
->(
+const AnimatedSelectContent = React.forwardRef(
   (
     { className, children, position = 'popper', selectedVariant, ...props },
     ref
@@ -176,10 +165,7 @@ const AnimatedSelectContent = React.forwardRef<
 AnimatedSelectContent.displayName = SelectPrimitive.Content.displayName
 
 // Non-animated SelectContent component
-const StaticSelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
+const StaticSelectContent = React.forwardRef(({ className, children, position = 'popper', ...props }, ref) => (
   <SelectPrimitive.Portal>
     <SelectPrimitive.Content
       ref={ref}
@@ -208,12 +194,7 @@ const StaticSelectContent = React.forwardRef<
 ))
 StaticSelectContent.displayName = SelectPrimitive.Content.displayName
 
-const SelectContent = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & {
-    variants?: keyof typeof selectAnimationVariants
-  }
->((props, ref) => {
+const SelectContent = React.forwardRef((props, ref) => {
   const selectedVariant = props.variants || 'zoom'
 
   return (
@@ -227,10 +208,7 @@ const SelectContent = React.forwardRef<
 
 SelectContent.displayName = 'SelectContent'
 
-const SelectLabel = React.forwardRef<
-  React.ElementRef<typeof SelectPrimitive.Label>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
->(({ className, ...props }, ref) => (
+const SelectLabel = React.forwardRef(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
     className={cn('px-2 py-1.5 text-sm font-semibold', className)}
