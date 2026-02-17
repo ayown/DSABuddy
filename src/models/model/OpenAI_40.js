@@ -1,10 +1,12 @@
-import { ModalInterface } from '../../interface/ModalInterface'
+import { ModelInterface } from '../../interface/ModelInterface'
 import { createOpenAI } from '@ai-sdk/openai'
+import { generateObject } from 'ai'
+import { VALID_MODELS } from '@/constants/valid_models'
+import { outputSchema } from '@/schema/modelOutput'
 import { generateObjectResponce } from '../utils'
-import { VALID_MODELS } from '@/constants/valid_modals'
 
-export class OpenAI_3_5_turbo extends ModalInterface {
-  name = 'openai_3.5_turbo'
+export class OpenAi_4o extends ModelInterface {
+  name = 'openai_4o'
   apiKey = ''
 
   init(apiKey) {
@@ -15,7 +17,7 @@ export class OpenAI_3_5_turbo extends ModalInterface {
     try {
       const openai = createOpenAI({ compatibility: 'strict', apiKey: this.apiKey })
       const data = await generateObjectResponce({
-        model: openai.chat(VALID_MODELS.find((m) => m.name === this.name)?.model ?? 'gpt-3.5-turbo'),
+        model: openai(VALID_MODELS.find((m) => m.name === this.name)?.model),
         messages: props.messages,
         systemPrompt: props.systemPrompt,
         prompt: props.prompt,

@@ -14,13 +14,15 @@ import {
   SelectValue,
   SelectTrigger,
 } from '@/components/ui/select'
-import { VALID_MODELS } from './constants/valid_modals'
-import { HideApiKey } from '@/components/ui/input'
-import { useChromeStorage } from './hooks/useChromeStorage'
+import { VALID_MODELS } from './constants/valid_models'
+import { HideApiKey, Input } from '@/components/ui/input'
+import { setKeyModel, getKeyModel, setSelectModel, selectModel } from '@/lib/chromeStorage'
 
 const Popup = () => {
   const [apikey, setApikey] = React.useState(null)
   const [model, setModel] = React.useState(null)
+  const [baseUrl, setBaseUrl] = React.useState('')
+  const [customModelName, setCustomModelName] = React.useState('')
   const [isLoaded, setIsLoaded] = React.useState(false)
 
   const [isloading, setIsloading] = useState(false)
@@ -33,9 +35,8 @@ const Popup = () => {
     try {
       setIsloading(true)
 
-      const { setKeyModel } = useChromeStorage()
       if (apikey && model) {
-        await setKeyModel(apikey, model)
+        await setKeyModel(apikey, model, baseUrl, customModelName)
       }
 
       setSubmitMessage({
@@ -56,11 +57,13 @@ const Popup = () => {
     const loadChromeStorage = async () => {
       if (!chrome) return
 
-      const { selectModel, getKeyModel } = useChromeStorage()
-
-      setModel(await selectModel())
-      setSelectedModel(await selectModel())
-      setApikey((await getKeyModel(await selectModel())).apiKey)
+      const storedModel = await selectModel()
+      setModel(storedModel)
+      setSelectedModel(storedModel)
+      const data = await getKeyModel(storedModel)
+      setApikey(data.apiKey)
+      setBaseUrl(data.baseUrl || '')
+      setCustomModelName(data.customModelName || '')
 
       setIsLoaded(true)
     }
@@ -70,11 +73,13 @@ const Popup = () => {
 
   const heandelModel = async (v) => {
     if (v) {
-      const { setSelectModel, getKeyModel, selectModel } = useChromeStorage()
       setSelectModel(v)
       setModel(v)
       setSelectedModel(v)
-      setApikey((await getKeyModel(await selectModel())).apiKey)
+      const data = await getKeyModel(v)
+      setApikey(data.apiKey)
+      setBaseUrl(data.baseUrl || '')
+      setCustomModelName(data.customModelName || '')
     }
   }
 
@@ -126,6 +131,32 @@ const Popup = () => {
                 </SelectContent>
               </Select>
             </div>
+            {model === 'custom' && (
+              <>
+                <div className="space-y-2">
+                  <label htmlFor="baseUrl" className="text-xs text-muted-foreground">
+                    Base URL (Optional)
+                  </label>
+                  <Input
+                    id="baseUrl"
+                    value={baseUrl}
+                    onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="https://api.openai.com/v1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label htmlFor="customModelName" className="text-xs text-muted-foreground">
+                    Model Name (Optional)
+                  </label>
+                  <Input
+                    id="customModelName"
+                    value={customModelName}
+                    onChange={(e) => setCustomModelName(e.target.value)}
+                    placeholder="e.g. gpt-4-turbo"
+                  />
+                </div>
+              </>
+            )}
             <div className="space-y-2">
               <label htmlFor="text" className="text-xs text-muted-foreground">
                 API Key {model ? `for ${model}` : ''}
@@ -170,7 +201,7 @@ const Popup = () => {
             <p className="text-sm">
               Want more features?&nbsp;
               <a
-                href="https://github.com/piyushgarg-dev/leetcode-whisper-chrome-extension/issues/new"
+                href="https://github.com/ayown/DSABuddy/issues/new"
                 className="text-blue-500 hover:underline"
                 target="_blank"
               >

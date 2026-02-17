@@ -1,9 +1,11 @@
-import { ModalInterface } from '../../interface/ModalInterface'
+import { ModelInterface } from '../../interface/ModelInterface'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { generateText } from 'ai'
+import { VALID_MODELS } from '@/constants/valid_models'
+import { outputSchema } from '@/schema/modelOutput'
 import { generateObjectResponce } from '../utils'
-import { VALID_MODELS } from '@/constants/valid_modals'
 
-export class GeminiAI_1_5_pro extends ModalInterface {
+export class GeminiAI_1_5_pro extends ModelInterface {
   name = 'gemini_1.5_pro'
   apiKey = ''
 

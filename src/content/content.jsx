@@ -11,7 +11,7 @@ import {
 import { Highlight, themes } from 'prism-react-renderer'
 import { Input } from '@/components/ui/input'
 import { SYSTEM_PROMPT } from '@/constants/prompt'
-import { extractCode } from './util'
+import { LeetCodeAdapter } from './adapters/LeetCodeAdapter'
 
 import {
   Accordion,
@@ -23,10 +23,10 @@ import {
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
-import { ModalService } from '@/services/ModalService'
-import { useChromeStorage } from '@/hooks/useChromeStorage'
+import { ModelService } from '@/services/ModelService'
+import { setSelectModel, getKeyModel, selectModel } from '@/lib/chromeStorage'
 
-import { VALID_MODELS } from '@/constants/valid_modals'
+import { VALID_MODELS } from '@/constants/valid_models'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   Select,
@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LIMIT_VALUE } from '@/lib/indexedDB'
-import { useIndexDB } from '@/hooks/useIndexDB'
+import { getChatHistory, saveChatHistory, clearChatHistory } from '@/lib/indexedDB'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +64,8 @@ const ChatBox = ({
   visible,
   model,
   apikey,
+  baseUrl,
+  customModelName,
   heandelModel,
   selectedModel,
 }) => {
@@ -76,12 +78,13 @@ const ChatBox = ({
   const [offset, setOffset] = React.useState(0)
   const [totalMessages, setTotalMessages] = React.useState(0)
   const [isPriviousMsgLoading, setIsPriviousMsgLoading] = React.useState(false)
-  const { fetchChatHistory, saveChatHistory } = useIndexDB()
 
   const getProblemName = () => {
-    const url = window.location.href
-    const match = /\/problems\/([^/]+)/.exec(url)
-    return match ? match[1] : 'Unknown Problem'
+    const adapter = new LeetCodeAdapter()
+    if (adapter.match(window.location.href)) {
+      return adapter.getProblemName()
+    }
+    return 'Unknown Problem'
   }
 
   const problemName = getProblemName()
@@ -97,7 +100,6 @@ const ChatBox = ({
   }, [chatHistory, isResponseLoading, visible])
 
   const heandelClearChat = async () => {
-    const { clearChatHistory } = useIndexDB()
     await clearChatHistory(problemName)
     setChatHistory([])
     setPreviousChatHistory([])
@@ -107,8 +109,8 @@ const ChatBox = ({
    * Handles the generation of an AI response.
    *
    * This function performs the following steps:
-   * 1. Initializes a new instance of `ModalService`.
-   * 2. Selects a modal using the provided model and API key.
+   * 1. Initializes a new instance of `ModelService`.
+   * 2. Selects a model using the provided model and API key.
    * 3. Determines the programming language from the UI.
    * 4. Extracts the user's current code from the document.
    * 5. Modifies the system prompt with the problem statement, programming language, and extracted code.
@@ -121,22 +123,18 @@ const ChatBox = ({
    * @returns {Promise<void>} A promise that resolves when the AI response generation is complete.
    */
   const handleGenerateAIResponse = async () => {
-    const modalService = new ModalService()
+    const modelService = new ModelService()
 
-    modalService.selectModal(model, apikey)
+    modelService.selectModel(model, apikey, { baseUrl, modelName: customModelName })
 
+    const adapter = new LeetCodeAdapter()
     let programmingLanguage = 'UNKNOWN'
+    let extractedCode = ''
 
-    const changeLanguageButton = document.querySelector(
-      'button.rounded.items-center.whitespace-nowrap.inline-flex.bg-transparent.dark\\:bg-dark-transparent.text-text-secondary.group'
-    )
-    if (changeLanguageButton) {
-      if (changeLanguageButton.textContent)
-        programmingLanguage = changeLanguageButton.textContent
+    if (adapter.match(window.location.href)) {
+      programmingLanguage = adapter.getLanguage() || 'UNKNOWN'
+      extractedCode = adapter.getUserCode()
     }
-    const userCurrentCodeContainer = document.querySelectorAll('.view-line')
-
-    const extractedCode = extractCode(userCurrentCodeContainer)
 
     const systemPromptModified = SYSTEM_PROMPT.replace(
       /{{problem_statement}}/gi,
@@ -147,7 +145,7 @@ const ChatBox = ({
 
     const PCH = chatHistory
 
-    const { error, success } = await modalService.generate({
+    const { error, success } = await modelService.generate({
       prompt: `${value}`,
       systemPrompt: systemPromptModified,
       messages: PCH,
@@ -205,7 +203,7 @@ const ChatBox = ({
 
   const loadInitialChatHistory = async () => {
     const { totalMessageCount, chatHistory, allChatHistory } =
-      await fetchChatHistory(problemName, LIMIT_VALUE, 0)
+      await getChatHistory(problemName, LIMIT_VALUE, 0)
     setPreviousChatHistory(allChatHistory || [])
 
     setTotalMessages(totalMessageCount)
@@ -222,7 +220,7 @@ const ChatBox = ({
       return
     }
     setIsPriviousMsgLoading(true)
-    const { chatHistory: moreMessages } = await fetchChatHistory(
+    const { chatHistory: moreMessages } = await getChatHistory(
       problemName,
       LIMIT_VALUE,
       offset
@@ -248,8 +246,8 @@ const ChatBox = ({
 
   const onSendMessage = async (value) => {
     setIsResponseLoading(true)
-    const newMessage = { 
-      role: 'user', 
+    const newMessage = {
+      role: 'user',
       content: value,
       timestamp: Date.now()
     }
@@ -280,7 +278,7 @@ const ChatBox = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="tertiary" size={'icon'}>
-                              <MoreVertical size={18} />
+              <MoreVertical size={18} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56">
@@ -320,8 +318,8 @@ const ChatBox = ({
             <DropdownMenuItem
               onClick={heandelClearChat}
               onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor =
-                  'rgb(185 28 28 / 0.35)')
+              (e.currentTarget.style.backgroundColor =
+                'rgb(185 28 28 / 0.35)')
               }
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
             >
@@ -362,8 +360,8 @@ const ChatBox = ({
                     {(() => {
                       try {
                         const parsedContent = JSON.parse(message.content)
-                        return typeof parsedContent === 'string' 
-                          ? parsedContent 
+                        return typeof parsedContent === 'string'
+                          ? parsedContent
                           : parsedContent.feedback || message.content
                       } catch {
                         return message.content
@@ -379,7 +377,7 @@ const ChatBox = ({
                       return false
                     }
                   })() && (
-                                          <Accordion type="multiple">
+                      <Accordion type="multiple">
                         {(() => {
                           try {
                             const parsedContent = JSON.parse(message.content)
@@ -388,107 +386,107 @@ const ChatBox = ({
                             return false
                           }
                         })() && (
-                          <AccordionItem value="item-1" className="max-w-80">
-                            <AccordionTrigger>Hints 👀</AccordionTrigger>
-                            <AccordionContent>
-                              <ul className="space-y-4">
-                                {(() => {
-                                  try {
-                                    const parsedContent = JSON.parse(message.content)
-                                    return parsedContent?.hints?.map((e) => (
-                                      <li key={e}>{e}</li>
-                                    ))
-                                  } catch {
-                                    return []
-                                  }
-                                })()}
-                              </ul>
-                            </AccordionContent>
-                          </AccordionItem>
-                        )}
-                      {(() => {
-                        try {
-                          const parsedContent = JSON.parse(message.content)
-                          return parsedContent?.snippet
-                        } catch {
-                          return false
-                        }
-                      })() && (
-                        <AccordionItem value="item-2" className="max-w-80">
-                          <AccordionTrigger>Code 🧑🏻‍💻</AccordionTrigger>
+                            <AccordionItem value="item-1" className="max-w-80">
+                              <AccordionTrigger>Hints 👀</AccordionTrigger>
+                              <AccordionContent>
+                                <ul className="space-y-4">
+                                  {(() => {
+                                    try {
+                                      const parsedContent = JSON.parse(message.content)
+                                      return parsedContent?.hints?.map((e) => (
+                                        <li key={e}>{e}</li>
+                                      ))
+                                    } catch {
+                                      return []
+                                    }
+                                  })()}
+                                </ul>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                        {(() => {
+                          try {
+                            const parsedContent = JSON.parse(message.content)
+                            return parsedContent?.snippet
+                          } catch {
+                            return false
+                          }
+                        })() && (
+                            <AccordionItem value="item-2" className="max-w-80">
+                              <AccordionTrigger>Code 🧑🏻‍💻</AccordionTrigger>
 
-                          <AccordionContent>
-                            <div className="mt-4 rounded-md">
-                              <div className="relative">
-                                <Copy
-                                  onClick={() => {
-                                    try {
-                                      const parsedContent = JSON.parse(message.content)
-                                      if (parsedContent?.snippet) {
-                                        navigator.clipboard.writeText(parsedContent.snippet)
-                                      }
-                                    } catch {
-                                      // If parsing fails, do nothing
-                                    }
-                                  }}
-                                  className="absolute right-2 top-2 h-4 w-4"
-                                />
-                                <Highlight
-                                  theme={themes.dracula}
-                                  code={(() => {
-                                    try {
-                                      const parsedContent = JSON.parse(message.content)
-                                      return parsedContent?.snippet || ''
-                                    } catch {
-                                      return ''
-                                    }
-                                  })()}
-                                  language={(() => {
-                                    try {
-                                      const parsedContent = JSON.parse(message.content)
-                                      return parsedContent?.programmingLanguage?.toLowerCase() || 'javascript'
-                                    } catch {
-                                      return 'javascript'
-                                    }
-                                  })()}
-                                >
-                                  {({
-                                    className,
-                                    style,
-                                    tokens,
-                                    getLineProps,
-                                    getTokenProps,
-                                  }) => (
-                                    <pre
-                                      style={style}
-                                      className={cn(
-                                        className,
-                                        'p-3 rounded-md'
-                                      )}
+                              <AccordionContent>
+                                <div className="mt-4 rounded-md">
+                                  <div className="relative">
+                                    <Copy
+                                      onClick={() => {
+                                        try {
+                                          const parsedContent = JSON.parse(message.content)
+                                          if (parsedContent?.snippet) {
+                                            navigator.clipboard.writeText(parsedContent.snippet)
+                                          }
+                                        } catch {
+                                          // If parsing fails, do nothing
+                                        }
+                                      }}
+                                      className="absolute right-2 top-2 h-4 w-4"
+                                    />
+                                    <Highlight
+                                      theme={themes.dracula}
+                                      code={(() => {
+                                        try {
+                                          const parsedContent = JSON.parse(message.content)
+                                          return parsedContent?.snippet || ''
+                                        } catch {
+                                          return ''
+                                        }
+                                      })()}
+                                      language={(() => {
+                                        try {
+                                          const parsedContent = JSON.parse(message.content)
+                                          return parsedContent?.programmingLanguage?.toLowerCase() || 'javascript'
+                                        } catch {
+                                          return 'javascript'
+                                        }
+                                      })()}
                                     >
-                                      {tokens.map((line, i) => (
-                                        <div
-                                          key={i}
-                                          {...getLineProps({ line })}
+                                      {({
+                                        className,
+                                        style,
+                                        tokens,
+                                        getLineProps,
+                                        getTokenProps,
+                                      }) => (
+                                        <pre
+                                          style={style}
+                                          className={cn(
+                                            className,
+                                            'p-3 rounded-md'
+                                          )}
                                         >
-                                          {line.map((token, key) => (
-                                            <span
-                                              key={key}
-                                              {...getTokenProps({ token })}
-                                            />
+                                          {tokens.map((line, i) => (
+                                            <div
+                                              key={i}
+                                              {...getLineProps({ line })}
+                                            >
+                                              {line.map((token, key) => (
+                                                <span
+                                                  key={key}
+                                                  {...getTokenProps({ token })}
+                                                />
+                                              ))}
+                                            </div>
                                           ))}
-                                        </div>
-                                      ))}
-                                    </pre>
-                                  )}
-                                </Highlight>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-                    </Accordion>
-                  )}
+                                        </pre>
+                                      )}
+                                    </Highlight>
+                                  </div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                      </Accordion>
+                    )}
                 </>
               </div>
             ))}
@@ -546,42 +544,56 @@ const ChatBox = ({
 const ContentPage = () => {
   const [chatboxExpanded, setChatboxExpanded] = React.useState(false)
 
-  const metaDescriptionEl = document.querySelector('meta[name=description]')
-  const problemStatement = metaDescriptionEl?.getAttribute('content') || ''
+  const [problemStatement, setProblemStatement] = React.useState('')
 
-  const [modal, setModal] = React.useState(null)
+  const [model, setModel] = React.useState(null)
   const [apiKey, setApiKey] = React.useState(null)
+  const [baseUrl, setBaseUrl] = React.useState(null)
+  const [customModelName, setCustomModelName] = React.useState(null)
   const [selectedModel, setSelectedModel] = React.useState(undefined)
 
   const ref = useRef(null)
 
-  const handleDocumentClick = (e) => {
-    if (
-      ref.current &&
-      e.target instanceof Node &&
-      !ref.current.contains(e.target)
-    ) {
-      // if (chatboxExpanded) setChatboxExpanded(false)
-    }
-  }
-
   React.useEffect(() => {
+    const adapter = new LeetCodeAdapter()
+
+    // Initial check
+    if (adapter.match(window.location.href)) {
+      const statement = adapter.getProblemStatement()
+      if (statement) setProblemStatement(statement)
+    }
+
+    const observer = new MutationObserver(() => {
+      if (adapter.match(window.location.href)) {
+        const statement = adapter.getProblemStatement()
+        if (statement && statement !== problemStatement) {
+          setProblemStatement(statement)
+        }
+      }
+    })
+
+    observer.observe(document.body, { childList: true, subtree: true })
+
     document.addEventListener('click', handleDocumentClick)
     return () => {
       document.removeEventListener('click', handleDocumentClick)
+      observer.disconnect()
     }
-  }, [])
-  ;(async () => {
-    const { getKeyModel, selectModel } = useChromeStorage()
-    const { model, apiKey } = await getKeyModel(await selectModel())
+  }, [problemStatement])
+  React.useEffect(() => {
+    ; (async () => {
+      const storedModel = await selectModel();
+      const data = await getKeyModel(storedModel)
 
-    setModal(model)
-    setApiKey(apiKey)
-  })()
+      setModel(data.model)
+      setApiKey(data.apiKey)
+      setBaseUrl(data.baseUrl)
+      setCustomModelName(data.customModelName)
+    })()
+  }, [])
 
   const heandelModel = (v) => {
     if (v) {
-      const { setSelectModel } = useChromeStorage()
       setSelectModel(v)
       setSelectedModel(v)
     }
@@ -590,8 +602,6 @@ const ContentPage = () => {
   React.useEffect(() => {
     const loadChromeStorage = async () => {
       if (!chrome) return
-
-      const { selectModel } = useChromeStorage()
 
       setSelectedModel(await selectModel())
     }
@@ -610,7 +620,7 @@ const ContentPage = () => {
       }}
     >
       {chatboxExpanded && (
-        !modal || !apiKey ? (
+        !model || !apiKey ? (
           <Card className="mb-5">
             <CardContent className="h-[500px] grid place-items-center">
               <div className="grid place-items-center gap-4">
@@ -631,35 +641,35 @@ const ContentPage = () => {
                 )}
                 {selectedModel && (
                   <>
-                  <p>
-                    We couldn't find any API key for selected model{' '}
-                    <b>
-                      <u>{selectedModel}</u>
-                    </b>
-                  </p>
-                  <p>you can select another models</p>
-                  <Select
-                    onValueChange={(v) => heandelModel(v)}
-                    value={selectedModel || ''}
-                  >
-                    <SelectTrigger className="w-56">
-                      <SelectValue placeholder="Select a model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectLabel>Model</SelectLabel>
-                        <SelectSeparator />
-                        {VALID_MODELS.map((modelOption) => (
-                          <SelectItem
-                            key={modelOption.name}
-                            value={modelOption.name}
-                          >
-                            {modelOption.display}
-                          </SelectItem>
-                        ))}
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
+                    <p>
+                      We couldn't find any API key for selected model{' '}
+                      <b>
+                        <u>{selectedModel}</u>
+                      </b>
+                    </p>
+                    <p>you can select another models</p>
+                    <Select
+                      onValueChange={(v) => heandelModel(v)}
+                      value={selectedModel || ''}
+                    >
+                      <SelectTrigger className="w-56">
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectLabel>Model</SelectLabel>
+                          <SelectSeparator />
+                          {VALID_MODELS.map((modelOption) => (
+                            <SelectItem
+                              key={modelOption.name}
+                              value={modelOption.name}
+                            >
+                              {modelOption.display}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
                   </>
                 )}
               </div>
@@ -669,8 +679,10 @@ const ContentPage = () => {
           <ChatBox
             visible={chatboxExpanded}
             context={{ problemStatement }}
-            model={modal}
+            model={model}
             apikey={apiKey}
+            baseUrl={baseUrl}
+            customModelName={customModelName}
             heandelModel={heandelModel}
             selectedModel={selectedModel}
           />
@@ -686,7 +698,7 @@ const ContentPage = () => {
         </Button>
       </div>
     </div>
-)
+  )
 }
 
 export default ContentPage

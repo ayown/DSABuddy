@@ -1,6 +1,6 @@
-import { ModalInterface } from '../interface/ModalInterface'
+import { ModelInterface } from '../interface/ModelInterface'
 
-export class BaseModal extends ModalInterface {
+export class BaseModel extends ModelInterface {
   apiKey = ''
 
   init(apiKey) {

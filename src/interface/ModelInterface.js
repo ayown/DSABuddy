@@ -9,8 +9,8 @@ export const parseChatHistoryFromModal = (chatHistory) => {
   }))
 }
 
-export class ModalInterface {
-  init(apiKey) {}
+export class ModelInterface {
+  init(apiKey) { }
   async generateResponse(props) {
     throw new Error('generateResponse must be implemented in subclass')
   }
