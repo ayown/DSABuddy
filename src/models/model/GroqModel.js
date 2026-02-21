@@ -1,22 +1,31 @@
 import { ModelInterface } from '../../interface/ModelInterface'
+import { VALID_MODELS } from '@/constants/valid_models'
+
+const RESPONSE_SCHEMA = {
+    type: 'OBJECT',
+    properties: {
+        feedback: { type: 'STRING' },
+        hints: { type: 'ARRAY', items: { type: 'STRING' } },
+        snippet: { type: 'STRING' },
+        programmingLanguage: { type: 'STRING' },
+    },
+    required: ['feedback'],
+}
 
 const SCHEMA_NOTE = `\nAlways respond with a JSON object containing: "feedback" (string, required), "hints" (array of up to 2 strings, optional), "snippet" (code string, optional), "programmingLanguage" (string, optional).`
 
-export class GenericOpenAI extends ModelInterface {
-    name = 'custom'
+export class GroqModel extends ModelInterface {
+    name = 'groq_llama'
     apiKey = ''
-    baseUrl = ''
-    modelName = ''
 
-    init(apiKey, config = {}) {
+    init(apiKey) {
         this.apiKey = apiKey
-        this.baseUrl = config.baseUrl || 'https://api.openai.com/v1'
-        this.modelName = config.modelName || 'gpt-3.5-turbo'
     }
 
     async generateResponse(props) {
         try {
-            const url = this.baseUrl.endsWith('/') ? `${this.baseUrl}chat/completions` : `${this.baseUrl}/chat/completions`
+            const modelEntry = VALID_MODELS.find((m) => m.name === this.name)
+            const modelId = modelEntry?.model ?? 'llama-3.3-70b-versatile'
 
             const messages = [
                 { role: 'system', content: (props.systemPrompt || '') + SCHEMA_NOTE },
@@ -27,14 +36,14 @@ export class GenericOpenAI extends ModelInterface {
                 { role: 'user', content: props.prompt }
             ]
 
-            const response = await fetch(url, {
+            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${this.apiKey}`
                 },
                 body: JSON.stringify({
-                    model: this.modelName,
+                    model: modelId,
                     messages,
                     response_format: { type: 'json_object' }
                 })
@@ -42,7 +51,7 @@ export class GenericOpenAI extends ModelInterface {
 
             if (!response.ok) {
                 const errText = await response.text()
-                return { error: { message: `Custom API error ${response.status}: ${errText}` }, success: null }
+                return { error: { message: `Groq error ${response.status}: ${errText}` }, success: null }
             }
 
             const json = await response.json()

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import { createRoot } from 'react-dom/client'
 import { Button } from '@/components/ui/button'
 import {
   Bot,
@@ -23,7 +24,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Card, CardContent, CardFooter } from '@/components/ui/card'
 
-import { ModelService } from '@/services/ModelService'
+// API calls are routed through background.js via chrome.runtime.sendMessage
 import { setSelectModel, getKeyModel, selectModel } from '@/lib/chromeStorage'
 
 import { VALID_MODELS } from '@/constants/valid_models'
@@ -78,6 +79,14 @@ const ChatBox = ({
   const [offset, setOffset] = React.useState(0)
   const [totalMessages, setTotalMessages] = React.useState(0)
   const [isPriviousMsgLoading, setIsPriviousMsgLoading] = React.useState(false)
+  const [rateLimitSecs, setRateLimitSecs] = React.useState(0)
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitSecs <= 0) return
+    const timer = setTimeout(() => setRateLimitSecs(s => s - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [rateLimitSecs])
 
   const getProblemName = () => {
     const adapter = new LeetCodeAdapter()
@@ -106,27 +115,10 @@ const ChatBox = ({
   }
 
   /**
-   * Handles the generation of an AI response.
-   *
-   * This function performs the following steps:
-   * 1. Initializes a new instance of `ModelService`.
-   * 2. Selects a model using the provided model and API key.
-   * 3. Determines the programming language from the UI.
-   * 4. Extracts the user's current code from the document.
-   * 5. Modifies the system prompt with the problem statement, programming language, and extracted code.
-   * 6. Generates a response using the modified system prompt.
-   * 7. Updates the chat history with the generated response or error message.
-   * 8. Scrolls the chat box into view.
-   *
-   * @async
-   * @function handleGenerateAIResponse
-   * @returns {Promise<void>} A promise that resolves when the AI response generation is complete.
+   * Handles the generation of an AI response via background script.
+   * Routes API calls through the background service worker to bypass CORS.
    */
-  const handleGenerateAIResponse = async () => {
-    const modelService = new ModelService()
-
-    modelService.selectModel(model, apikey, { baseUrl, modelName: customModelName })
-
+  const handleGenerateAIResponse = async (messageText) => {
     const adapter = new LeetCodeAdapter()
     let programmingLanguage = 'UNKNOWN'
     let extractedCode = ''
@@ -136,6 +128,11 @@ const ChatBox = ({
       extractedCode = adapter.getUserCode()
     }
 
+    // Truncate code to avoid blowing through free-tier token limits
+    if (extractedCode.length > 3000) {
+      extractedCode = extractedCode.slice(0, 3000) + '\n// ... (truncated)'
+    }
+
     const systemPromptModified = SYSTEM_PROMPT.replace(
       /{{problem_statement}}/gi,
       context.problemStatement
@@ -143,33 +140,48 @@ const ChatBox = ({
       .replace(/{{programming_language}}/g, programmingLanguage)
       .replace(/{{user_code}}/g, extractedCode)
 
-    const PCH = chatHistory
+    // Only send last 6 messages to keep under free-tier token limits
+    const PCH = chatHistory.slice(-6)
 
-    const { error, success } = await modelService.generate({
-      prompt: `${value}`,
-      systemPrompt: systemPromptModified,
-      messages: PCH,
-      extractedCode: extractedCode,
+    // Route API call through background script to bypass CORS
+    const { error, success } = await new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        {
+          action: 'generateAI',
+          modelName: model,
+          apiKey: apikey,
+          config: { baseUrl, modelName: customModelName },
+          prompt: messageText,
+          systemPrompt: systemPromptModified,
+          messages: PCH,
+          extractedCode: extractedCode,
+        },
+        (response) => {
+          if (chrome.runtime.lastError) {
+            resolve({ error: { message: chrome.runtime.lastError.message }, success: null })
+          } else {
+            resolve(response || { error: { message: 'No response from background' }, success: null })
+          }
+        }
+      )
     })
 
     if (error) {
+      // Parse retry seconds from rate limit messages like "⏳ Rate limit... wait 12 seconds"
+      const retryMatch = error.message?.match(/(\d+)\s*seconds?/i)
+      if (retryMatch) setRateLimitSecs(parseInt(retryMatch[1], 10) + 2)
+
       const errorMessage = {
         role: 'assistant',
         content: error.message,
         timestamp: Date.now(),
       }
-      const userMessage = {
-        role: 'user',
-        content: value,
-        timestamp: Date.now(),
-      }
       await saveChatHistory(problemName, [
         ...priviousChatHistory,
-        userMessage,
         errorMessage,
       ])
-      setPreviousChatHistory((prev) => [...prev, userMessage, errorMessage])
-      setChatHistory((prev) => [...prev, userMessage, errorMessage])
+      setPreviousChatHistory((prev) => [...prev, errorMessage])
+      setChatHistory((prev) => [...prev, errorMessage])
       lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
 
@@ -179,18 +191,12 @@ const ChatBox = ({
         content: typeof success === 'string' ? success : JSON.stringify(success),
         timestamp: Date.now(),
       }
-      const userMessage = {
-        role: 'user',
-        content: value,
-        timestamp: Date.now(),
-      }
       await saveChatHistory(problemName, [
         ...priviousChatHistory,
-        userMessage,
         res,
       ])
-      setPreviousChatHistory((prev) => [...prev, userMessage, res])
-      setChatHistory((prev) => [...prev, userMessage, res])
+      setPreviousChatHistory((prev) => [...prev, res])
+      setChatHistory((prev) => [...prev, res])
       setValue('')
       lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
@@ -258,75 +264,34 @@ const ChatBox = ({
     setChatHistory([...chatHistory, newMessage])
 
     lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' })
-    handleGenerateAIResponse()
+    handleGenerateAIResponse(value)
   }
 
   if (!visible) return <></>
 
   return (
     <Card className="mb-2 ">
-      <div className="flex gap-2 items-center justify-between h-20 rounded-t-lg p-4">
+      <div className="flex gap-2 items-center justify-between h-16 rounded-t-lg px-3">
         <div className="flex gap-2 items-center justify-start">
-          <div className="bg-white rounded-full p-2">
-            <Bot color="#000" className="h-6 w-6" />
+          <div className="bg-white rounded-full p-1.5">
+            <Bot color="#000" className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Need Help?</h3>
-            <h6 className="font-normal text-xs">Always online</h6>
+            <h3 className="font-bold text-sm">Need Help?</h3>
+            <h6 className="font-normal text-[10px] opacity-60">
+              {VALID_MODELS.find((m) => m.name === selectedModel)?.display || 'No model'}
+            </h6>
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="tertiary" size={'icon'}>
-              <MoreVertical size={18} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56">
-            <DropdownMenuLabel className="flex items-center">
-              <Settings size={16} strokeWidth={1.5} className="mr-2" />{' '}
-              {
-                VALID_MODELS.find((model) => model.name === selectedModel)
-                  ?.display
-              }
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuSub>
-                <DropdownMenuSubTrigger>
-                  <Bot size={16} strokeWidth={1.5} /> Change Model
-                </DropdownMenuSubTrigger>
-                <DropdownMenuPortal>
-                  <DropdownMenuSubContent>
-                    <DropdownMenuRadioGroup
-                      value={selectedModel}
-                      onValueChange={(v) => heandelModel(v)}
-                    >
-                      {VALID_MODELS.map((modelOption) => (
-                        <DropdownMenuRadioItem
-                          key={modelOption.name}
-                          value={modelOption.name}
-                        >
-                          {modelOption.display}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuPortal>
-              </DropdownMenuSub>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={heandelClearChat}
-              onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor =
-                'rgb(185 28 28 / 0.35)')
-              }
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '')}
-            >
-              <Eraser size={14} strokeWidth={1.5} /> Clear Chat
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-900/30"
+          title="Clear chat"
+          onClick={heandelClearChat}
+        >
+          <Eraser size={16} strokeWidth={1.5} />
+        </Button>
       </div>
       <CardContent className="p-2">
         {chatHistory.length > 0 ? (
@@ -356,18 +321,20 @@ const ChatBox = ({
                 )}
               >
                 <>
-                  <p className="max-w-80">
+                  <div className="max-w-80" style={{ whiteSpace: 'pre-wrap' }}>
                     {(() => {
                       try {
                         const parsedContent = JSON.parse(message.content)
-                        return typeof parsedContent === 'string'
-                          ? parsedContent
-                          : parsedContent.feedback || message.content
+                        if (typeof parsedContent === 'string') return parsedContent
+                        if (parsedContent && typeof parsedContent === 'object' && 'feedback' in parsedContent) {
+                          return parsedContent.feedback
+                        }
+                        return message.content
                       } catch {
                         return message.content
                       }
                     })()}
-                  </p>
+                  </div>
 
                   {(() => {
                     try {
@@ -517,22 +484,22 @@ const ChatBox = ({
         >
           <Input
             id="message"
-            placeholder="Type your message..."
+            placeholder={rateLimitSecs > 0 ? `Rate limited — wait ${rateLimitSecs}s…` : 'Type your message...'}
             className="flex-1"
             autoComplete="off"
             value={value}
             onChange={(event) => setValue(event.target.value)}
-            disabled={isResponseLoading}
+            disabled={isResponseLoading || rateLimitSecs > 0}
             required
             ref={inputFieldRef}
           />
           <Button
             type="submit"
-            className="bg-[#fafafa] rounded-lg text-black"
+            className="bg-[#fafafa] rounded-lg text-black min-w-[40px] text-xs"
             size="icon"
-            disabled={value.length === 0}
+            disabled={value.length === 0 || rateLimitSecs > 0 || isResponseLoading}
           >
-            <Send className="h-4 w-4" />
+            {rateLimitSecs > 0 ? <span>{rateLimitSecs}s</span> : <Send className="h-4 w-4" />}
             <span className="sr-only">Send</span>
           </Button>
         </form>
@@ -574,23 +541,41 @@ const ContentPage = () => {
 
     observer.observe(document.body, { childList: true, subtree: true })
 
+    // Close chatbox when clicking outside the extension container
+    const handleDocumentClick = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        setChatboxExpanded(false)
+      }
+    }
+
     document.addEventListener('click', handleDocumentClick)
     return () => {
       document.removeEventListener('click', handleDocumentClick)
       observer.disconnect()
     }
   }, [problemStatement])
-  React.useEffect(() => {
-    ; (async () => {
-      const storedModel = await selectModel();
+  // Load model + API key from storage, and re-load whenever the popup saves new settings.
+  const loadFromStorage = React.useCallback(async () => {
+    try {
+      const storedModel = await selectModel()
       const data = await getKeyModel(storedModel)
-
+      setSelectedModel(storedModel)
       setModel(data.model)
       setApiKey(data.apiKey)
       setBaseUrl(data.baseUrl)
       setCustomModelName(data.customModelName)
-    })()
+    } catch (e) {
+      console.warn('DSA Buddy: failed to load storage', e)
+    }
   }, [])
+
+  React.useEffect(() => {
+    loadFromStorage()
+    // Re-load whenever the popup (or any part of the extension) writes to storage
+    const onStorageChanged = () => loadFromStorage()
+    chrome.storage.onChanged.addListener(onStorageChanged)
+    return () => chrome.storage.onChanged.removeListener(onStorageChanged)
+  }, [loadFromStorage])
 
   const heandelModel = (v) => {
     if (v) {
@@ -599,20 +584,10 @@ const ContentPage = () => {
     }
   }
 
-  React.useEffect(() => {
-    const loadChromeStorage = async () => {
-      if (!chrome) return
-
-      setSelectedModel(await selectModel())
-    }
-
-    loadChromeStorage()
-  }, [])
-
   return (
     <div
       ref={ref}
-      className="dark z-50"
+      className="dark z-[2147483647]"
       style={{
         position: 'fixed',
         bottom: '30px',
@@ -650,7 +625,7 @@ const ContentPage = () => {
                     <p>you can select another models</p>
                     <Select
                       onValueChange={(v) => heandelModel(v)}
-                      value={selectedModel || ''}
+                      value={selectedModel}
                     >
                       <SelectTrigger className="w-56">
                         <SelectValue placeholder="Select a model" />
@@ -701,4 +676,42 @@ const ContentPage = () => {
   )
 }
 
+// Duplicate mounting code removed.
+// The component is mounted by src/content.jsx
 export default ContentPage
+
+// ── Injection ──────────────────────────────────────────────────────────────
+// Vite builds this file directly as the "content" entry point.
+// We inject our React root here and use a MutationObserver to re-inject
+// if LeetCode's SPA (Next.js) removes the container during navigation.
+
+const CONTAINER_ID = '__dsa_buddy_root'
+
+function ensureContainer() {
+  if (document.getElementById(CONTAINER_ID)) return
+
+  const container = document.createElement('div')
+  container.id = CONTAINER_ID
+  document.body.appendChild(container)
+
+  createRoot(container).render(
+    <React.StrictMode>
+      <ContentPage />
+    </React.StrictMode>
+  )
+  console.log('DSA Buddy: bot icon injected')
+}
+
+// Initial injection — wait for body if needed
+if (document.body) {
+  ensureContainer()
+} else {
+  document.addEventListener('DOMContentLoaded', ensureContainer)
+}
+
+// Re-inject whenever LeetCode's SPA removes our container
+new MutationObserver(() => {
+  if (!document.getElementById(CONTAINER_ID)) {
+    ensureContainer()
+  }
+}).observe(document.body, { childList: true, subtree: false })

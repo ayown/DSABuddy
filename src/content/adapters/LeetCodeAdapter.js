@@ -8,6 +8,21 @@ export class LeetCodeAdapter extends SiteAdapter {
     }
 
     getProblemStatement() {
+        // Try to get the full problem description from the DOM first
+        const descriptionEl = document.querySelector('[data-track-load="description_content"]')
+            || document.querySelector('.elfjS')  // LeetCode's description container class
+            || document.querySelector('[class*="description"]');
+
+        if (descriptionEl) {
+            // Get text content, clean up whitespace
+            const fullText = descriptionEl.innerText || descriptionEl.textContent || '';
+            if (fullText.trim().length > 50) {
+                // Truncate to avoid token overload but keep enough for context
+                return fullText.trim().slice(0, 2000);
+            }
+        }
+
+        // Fallback: meta description (just a one-liner)
         const metaDescriptionEl = document.querySelector(SELECTORS.leetcode.metaDescription);
         return metaDescriptionEl?.getAttribute('content') || '';
     }

@@ -20,7 +20,12 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].js',
         chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: 'assets/[name]-[hash].[ext]'
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        // Chrome content scripts are injected as classic scripts.
+        // They CANNOT use ES module import statements.
+        // Force ALL shared code into each entry point by preventing
+        // Rollup from extracting common modules into separate chunks.
+        manualChunks: () => undefined
       }
     },
     assetsInlineLimit: 0

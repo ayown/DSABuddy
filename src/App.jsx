@@ -28,7 +28,7 @@ const Popup = () => {
   const [isloading, setIsloading] = useState(false)
   const [submitMessage, setSubmitMessage] = useState(null)
 
-  const [selectedModel, setSelectedModel] = useState('')
+  const [selectedModel, setSelectedModel] = useState(undefined)
 
   const updatestorage = async (e) => {
     e.preventDefault()
@@ -55,17 +55,32 @@ const Popup = () => {
 
   React.useEffect(() => {
     const loadChromeStorage = async () => {
-      if (!chrome) return
+      try {
+        if (typeof chrome === 'undefined' || !chrome.storage) {
+          setIsLoaded(true)
+          return
+        }
 
-      const storedModel = await selectModel()
-      setModel(storedModel)
-      setSelectedModel(storedModel)
-      const data = await getKeyModel(storedModel)
-      setApikey(data.apiKey)
-      setBaseUrl(data.baseUrl || '')
-      setCustomModelName(data.customModelName || '')
+        const storedModel = await selectModel()
+        // Default to first available model if nothing is stored
+        const modelToUse = storedModel || VALID_MODELS[0]?.name
 
-      setIsLoaded(true)
+        setModel(modelToUse)
+        setSelectedModel(modelToUse)
+
+        if (modelToUse) {
+          const data = await getKeyModel(modelToUse)
+          if (data) {
+            setApikey(data.apiKey)
+            setBaseUrl(data.baseUrl || '')
+            setCustomModelName(data.customModelName || '')
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load settings:', error)
+      } finally {
+        setIsLoaded(true)
+      }
     }
 
     loadChromeStorage()
@@ -110,7 +125,7 @@ const Popup = () => {
               </label>
               <Select
                 onValueChange={(v) => heandelModel(v)}
-                value={selectedModel || ''} // Add fallback to empty string
+                value={selectedModel}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a model" />

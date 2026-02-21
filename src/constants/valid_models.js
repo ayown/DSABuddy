@@ -1,7 +1,12 @@
 export const VALID_MODELS = [
-  { model: 'gpt-3.5-turbo', name: 'openai_3.5_turbo', display: 'GPT-3.5 Turbo' },
-  { model: 'gpt-4o', name: 'openai_4o', display: 'GPT-4 Optimized' },
-  { model: 'gemini-1.5-pro-latest', name: 'gemini_1.5_pro', display: 'Gemini 1.5 Pro (Latest)' },
+  // ── Groq (Free) ──────────────────────────────────────────
+  { model: 'llama-3.3-70b-versatile', name: 'groq_llama', display: 'Llama 3.3 70B (Free)' },
+  { model: 'deepseek-r1-distill-llama-70b', name: 'groq_deepseek', display: 'DeepSeek R1 70B (Free)' },
+
+  // ── Gemini (Free / Paid) ─────────────────────────────────
+  { model: 'gemini-2.0-flash', name: 'gemini_flash', display: 'Gemini 2.0 Flash ⚡' },
+  { model: 'gemini-2.0-flash-lite', name: 'gemini_1.5_pro', display: 'Gemini 2.0 Flash-Lite ⚡' },
+
+  // ── Custom ───────────────────────────────────────────────
   { model: 'custom', name: 'custom', display: 'Custom (OpenAI Compatible)' },
 ]
-// TypeScript type removed for JS-only project.
