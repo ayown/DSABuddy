@@ -571,22 +571,17 @@ const ContentPage = () => {
       new HackerRankAdapter(),
       new GFGAdapter(),
     ]
-    const adapter = adapters.find((a) => a.match(window.location.href))
 
-    // Initial check
-    if (adapter) {
-      const statement = adapter.getProblemStatement()
-      if (statement) setProblemStatement(statement)
+    const updateStatement = () => {
+      const adapter = adapters.find((a) => a.match(window.location.href))
+      const statement = adapter?.getProblemStatement() || ''
+      if (statement && statement !== problemStatement)
+        setProblemStatement(statement)
     }
 
-    const observer = new MutationObserver(() => {
-      if (adapter) {
-        const statement = adapter.getProblemStatement()
-        if (statement && statement !== problemStatement) {
-          setProblemStatement(statement)
-        }
-      }
-    })
+    updateStatement()
+
+    const observer = new MutationObserver(updateStatement)
 
     observer.observe(document.body, { childList: true, subtree: true })
 

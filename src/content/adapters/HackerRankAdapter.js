@@ -6,9 +6,13 @@ function normalizeText(text) {
   return (text || '').replace(/\s+/g, ' ').trim()
 }
 
-function firstVisibleElement(selector) {
+function firstElementByText(selector, minChars = 30) {
   const els = Array.from(document.querySelectorAll(selector))
-  return els.find((el) => el && el.offsetParent !== null) || null
+  for (const el of els) {
+    const t = normalizeText(el?.innerText || el?.textContent || '')
+    if (t.length >= minChars) return el
+  }
+  return els[0] || null
 }
 
 export class HackerRankAdapter extends SiteAdapter {
@@ -27,13 +31,19 @@ export class HackerRankAdapter extends SiteAdapter {
   }
 
   getProblemStatement() {
-    const el = firstVisibleElement(SELECTORS.hackerrank.problemStatement)
+    const el = firstElementByText(SELECTORS.hackerrank.problemStatement, 80)
     const text = el ? el.innerText || el.textContent || '' : ''
-    return normalizeText(text).slice(0, 2000)
+    const cleaned = normalizeText(text)
+    if (cleaned) return cleaned.slice(0, 2000)
+
+    const meta = document.querySelector(
+      'meta[name="description"], meta[property="og:description"]'
+    )
+    return normalizeText(meta?.getAttribute('content') || '').slice(0, 800)
   }
 
   getUserCode() {
-    const editor = firstVisibleElement('.monaco-editor')
+    const editor = document.querySelector('.monaco-editor')
     const lines = editor
       ? editor.querySelectorAll('.view-lines .view-line')
       : document.querySelectorAll(SELECTORS.hackerrank.editorLines)
@@ -42,7 +52,7 @@ export class HackerRankAdapter extends SiteAdapter {
   }
 
   getLanguage() {
-    const candidate = firstVisibleElement(SELECTORS.hackerrank.language)
+    const candidate = document.querySelector(SELECTORS.hackerrank.language)
     if (!candidate) return 'UNKNOWN'
 
     if (candidate.tagName === 'SELECT') {
@@ -59,7 +69,7 @@ export class HackerRankAdapter extends SiteAdapter {
   }
 
   getProblemName() {
-    const titleEl = firstVisibleElement(SELECTORS.hackerrank.problemTitle)
+    const titleEl = firstElementByText(SELECTORS.hackerrank.problemTitle, 5)
     const title = normalizeText(titleEl ? titleEl.textContent : '')
     if (title)
       return `hackerrank:${title
