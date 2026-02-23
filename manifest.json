@@ -12,8 +12,11 @@
     {
       "matches": [
         "https://leetcode.com/*",
+        "https://*.leetcode.com/*",
         "https://hackerrank.com/*",
-        "https://geeksforgeeks.org/*"
+        "https://*.hackerrank.com/*",
+        "https://geeksforgeeks.org/*",
+        "https://*.geeksforgeeks.org/*"
       ],
       "js": [
         "content.js"
@@ -25,8 +28,11 @@
   ],
   "host_permissions": [
     "https://leetcode.com/*",
+    "https://*.leetcode.com/*",
     "https://hackerrank.com/*",
+    "https://*.hackerrank.com/*",
     "https://geeksforgeeks.org/*",
+    "https://*.geeksforgeeks.org/*",
     "https://generativelanguage.googleapis.com/*",
     "https://api.openai.com/*",
     "https://*.openai.com/*",

@@ -1,18 +1,13 @@
 import React, { useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Button } from '@/components/ui/button'
-import {
-  Bot,
-  Copy,
-  MoreVertical,
-  Eraser,
-  Send,
-  Settings,
-} from 'lucide-react'
+import { Bot, Copy, MoreVertical, Eraser, Send, Settings } from 'lucide-react'
 import { Highlight, themes } from 'prism-react-renderer'
 import { Input } from '@/components/ui/input'
 import { SYSTEM_PROMPT } from '@/constants/prompt'
 import { LeetCodeAdapter } from './adapters/LeetCodeAdapter'
+import { HackerRankAdapter } from './adapters/HackerRankAdapter'
+import { GFGAdapter } from './adapters/GFGAdapter'
 
 import {
   Accordion,
@@ -40,7 +35,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { LIMIT_VALUE } from '@/lib/indexedDB'
-import { getChatHistory, saveChatHistory, clearChatHistory } from '@/lib/indexedDB'
+import {
+  getChatHistory,
+  saveChatHistory,
+  clearChatHistory,
+} from '@/lib/indexedDB'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,7 +50,6 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -84,15 +82,18 @@ const ChatBox = ({
   // Countdown timer for rate limit
   useEffect(() => {
     if (rateLimitSecs <= 0) return
-    const timer = setTimeout(() => setRateLimitSecs(s => s - 1), 1000)
+    const timer = setTimeout(() => setRateLimitSecs((s) => s - 1), 1000)
     return () => clearTimeout(timer)
   }, [rateLimitSecs])
 
   const getProblemName = () => {
-    const adapter = new LeetCodeAdapter()
-    if (adapter.match(window.location.href)) {
-      return adapter.getProblemName()
-    }
+    const adapters = [
+      new LeetCodeAdapter(),
+      new HackerRankAdapter(),
+      new GFGAdapter(),
+    ]
+    const adapter = adapters.find((a) => a.match(window.location.href))
+    if (adapter) return adapter.getProblemName()
     return 'Unknown Problem'
   }
 
@@ -119,11 +120,16 @@ const ChatBox = ({
    * Routes API calls through the background service worker to bypass CORS.
    */
   const handleGenerateAIResponse = async (messageText) => {
-    const adapter = new LeetCodeAdapter()
+    const adapters = [
+      new LeetCodeAdapter(),
+      new HackerRankAdapter(),
+      new GFGAdapter(),
+    ]
+    const adapter = adapters.find((a) => a.match(window.location.href))
     let programmingLanguage = 'UNKNOWN'
     let extractedCode = ''
 
-    if (adapter.match(window.location.href)) {
+    if (adapter) {
       programmingLanguage = adapter.getLanguage() || 'UNKNOWN'
       extractedCode = adapter.getUserCode()
     }
@@ -158,9 +164,17 @@ const ChatBox = ({
         },
         (response) => {
           if (chrome.runtime.lastError) {
-            resolve({ error: { message: chrome.runtime.lastError.message }, success: null })
+            resolve({
+              error: { message: chrome.runtime.lastError.message },
+              success: null,
+            })
           } else {
-            resolve(response || { error: { message: 'No response from background' }, success: null })
+            resolve(
+              response || {
+                error: { message: 'No response from background' },
+                success: null,
+              }
+            )
           }
         }
       )
@@ -176,10 +190,7 @@ const ChatBox = ({
         content: error.message,
         timestamp: Date.now(),
       }
-      await saveChatHistory(problemName, [
-        ...priviousChatHistory,
-        errorMessage,
-      ])
+      await saveChatHistory(problemName, [...priviousChatHistory, errorMessage])
       setPreviousChatHistory((prev) => [...prev, errorMessage])
       setChatHistory((prev) => [...prev, errorMessage])
       lastMessageRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -188,13 +199,11 @@ const ChatBox = ({
     if (success) {
       const res = {
         role: 'assistant',
-        content: typeof success === 'string' ? success : JSON.stringify(success),
+        content:
+          typeof success === 'string' ? success : JSON.stringify(success),
         timestamp: Date.now(),
       }
-      await saveChatHistory(problemName, [
-        ...priviousChatHistory,
-        res,
-      ])
+      await saveChatHistory(problemName, [...priviousChatHistory, res])
       setPreviousChatHistory((prev) => [...prev, res])
       setChatHistory((prev) => [...prev, res])
       setValue('')
@@ -255,7 +264,7 @@ const ChatBox = ({
     const newMessage = {
       role: 'user',
       content: value,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     }
 
     setPreviousChatHistory((prev) => {
@@ -279,7 +288,8 @@ const ChatBox = ({
           <div>
             <h3 className="font-bold text-sm">Need Help?</h3>
             <h6 className="font-normal text-[10px] opacity-60">
-              {VALID_MODELS.find((m) => m.name === selectedModel)?.display || 'No model'}
+              {VALID_MODELS.find((m) => m.name === selectedModel)?.display ||
+                'No model'}
             </h6>
           </div>
         </div>
@@ -325,8 +335,13 @@ const ChatBox = ({
                     {(() => {
                       try {
                         const parsedContent = JSON.parse(message.content)
-                        if (typeof parsedContent === 'string') return parsedContent
-                        if (parsedContent && typeof parsedContent === 'object' && 'feedback' in parsedContent) {
+                        if (typeof parsedContent === 'string')
+                          return parsedContent
+                        if (
+                          parsedContent &&
+                          typeof parsedContent === 'object' &&
+                          'feedback' in parsedContent
+                        ) {
                           return parsedContent.feedback
                         }
                         return message.content
@@ -339,121 +354,140 @@ const ChatBox = ({
                   {(() => {
                     try {
                       const parsedContent = JSON.parse(message.content)
-                      return typeof parsedContent === 'object' && parsedContent !== null
+                      return (
+                        typeof parsedContent === 'object' &&
+                        parsedContent !== null
+                      )
                     } catch {
                       return false
                     }
                   })() && (
-                      <Accordion type="multiple">
-                        {(() => {
-                          try {
-                            const parsedContent = JSON.parse(message.content)
-                            return parsedContent?.hints && parsedContent.hints.length > 0
-                          } catch {
-                            return false
-                          }
-                        })() && (
-                            <AccordionItem value="item-1" className="max-w-80">
-                              <AccordionTrigger>Hints 👀</AccordionTrigger>
-                              <AccordionContent>
-                                <ul className="space-y-4">
-                                  {(() => {
+                    <Accordion type="multiple">
+                      {(() => {
+                        try {
+                          const parsedContent = JSON.parse(message.content)
+                          return (
+                            parsedContent?.hints &&
+                            parsedContent.hints.length > 0
+                          )
+                        } catch {
+                          return false
+                        }
+                      })() && (
+                        <AccordionItem value="item-1" className="max-w-80">
+                          <AccordionTrigger>Hints 👀</AccordionTrigger>
+                          <AccordionContent>
+                            <ul className="space-y-4">
+                              {(() => {
+                                try {
+                                  const parsedContent = JSON.parse(
+                                    message.content
+                                  )
+                                  return parsedContent?.hints?.map((e) => (
+                                    <li key={e}>{e}</li>
+                                  ))
+                                } catch {
+                                  return []
+                                }
+                              })()}
+                            </ul>
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                      {(() => {
+                        try {
+                          const parsedContent = JSON.parse(message.content)
+                          return parsedContent?.snippet
+                        } catch {
+                          return false
+                        }
+                      })() && (
+                        <AccordionItem value="item-2" className="max-w-80">
+                          <AccordionTrigger>Code 🧑🏻‍💻</AccordionTrigger>
+
+                          <AccordionContent>
+                            <div className="mt-4 rounded-md">
+                              <div className="relative">
+                                <Copy
+                                  onClick={() => {
                                     try {
-                                      const parsedContent = JSON.parse(message.content)
-                                      return parsedContent?.hints?.map((e) => (
-                                        <li key={e}>{e}</li>
-                                      ))
+                                      const parsedContent = JSON.parse(
+                                        message.content
+                                      )
+                                      if (parsedContent?.snippet) {
+                                        navigator.clipboard.writeText(
+                                          parsedContent.snippet
+                                        )
+                                      }
                                     } catch {
-                                      return []
+                                      // If parsing fails, do nothing
+                                    }
+                                  }}
+                                  className="absolute right-2 top-2 h-4 w-4"
+                                />
+                                <Highlight
+                                  theme={themes.dracula}
+                                  code={(() => {
+                                    try {
+                                      const parsedContent = JSON.parse(
+                                        message.content
+                                      )
+                                      return parsedContent?.snippet || ''
+                                    } catch {
+                                      return ''
                                     }
                                   })()}
-                                </ul>
-                              </AccordionContent>
-                            </AccordionItem>
-                          )}
-                        {(() => {
-                          try {
-                            const parsedContent = JSON.parse(message.content)
-                            return parsedContent?.snippet
-                          } catch {
-                            return false
-                          }
-                        })() && (
-                            <AccordionItem value="item-2" className="max-w-80">
-                              <AccordionTrigger>Code 🧑🏻‍💻</AccordionTrigger>
-
-                              <AccordionContent>
-                                <div className="mt-4 rounded-md">
-                                  <div className="relative">
-                                    <Copy
-                                      onClick={() => {
-                                        try {
-                                          const parsedContent = JSON.parse(message.content)
-                                          if (parsedContent?.snippet) {
-                                            navigator.clipboard.writeText(parsedContent.snippet)
-                                          }
-                                        } catch {
-                                          // If parsing fails, do nothing
-                                        }
-                                      }}
-                                      className="absolute right-2 top-2 h-4 w-4"
-                                    />
-                                    <Highlight
-                                      theme={themes.dracula}
-                                      code={(() => {
-                                        try {
-                                          const parsedContent = JSON.parse(message.content)
-                                          return parsedContent?.snippet || ''
-                                        } catch {
-                                          return ''
-                                        }
-                                      })()}
-                                      language={(() => {
-                                        try {
-                                          const parsedContent = JSON.parse(message.content)
-                                          return parsedContent?.programmingLanguage?.toLowerCase() || 'javascript'
-                                        } catch {
-                                          return 'javascript'
-                                        }
-                                      })()}
-                                    >
-                                      {({
+                                  language={(() => {
+                                    try {
+                                      const parsedContent = JSON.parse(
+                                        message.content
+                                      )
+                                      return (
+                                        parsedContent?.programmingLanguage?.toLowerCase() ||
+                                        'javascript'
+                                      )
+                                    } catch {
+                                      return 'javascript'
+                                    }
+                                  })()}
+                                >
+                                  {({
+                                    className,
+                                    style,
+                                    tokens,
+                                    getLineProps,
+                                    getTokenProps,
+                                  }) => (
+                                    <pre
+                                      style={style}
+                                      className={cn(
                                         className,
-                                        style,
-                                        tokens,
-                                        getLineProps,
-                                        getTokenProps,
-                                      }) => (
-                                        <pre
-                                          style={style}
-                                          className={cn(
-                                            className,
-                                            'p-3 rounded-md'
-                                          )}
-                                        >
-                                          {tokens.map((line, i) => (
-                                            <div
-                                              key={i}
-                                              {...getLineProps({ line })}
-                                            >
-                                              {line.map((token, key) => (
-                                                <span
-                                                  key={key}
-                                                  {...getTokenProps({ token })}
-                                                />
-                                              ))}
-                                            </div>
-                                          ))}
-                                        </pre>
+                                        'p-3 rounded-md'
                                       )}
-                                    </Highlight>
-                                  </div>
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          )}
-                      </Accordion>
-                    )}
+                                    >
+                                      {tokens.map((line, i) => (
+                                        <div
+                                          key={i}
+                                          {...getLineProps({ line })}
+                                        >
+                                          {line.map((token, key) => (
+                                            <span
+                                              key={key}
+                                              {...getTokenProps({ token })}
+                                            />
+                                          ))}
+                                        </div>
+                                      ))}
+                                    </pre>
+                                  )}
+                                </Highlight>
+                              </div>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      )}
+                    </Accordion>
+                  )}
                 </>
               </div>
             ))}
@@ -484,7 +518,11 @@ const ChatBox = ({
         >
           <Input
             id="message"
-            placeholder={rateLimitSecs > 0 ? `Rate limited — wait ${rateLimitSecs}s…` : 'Type your message...'}
+            placeholder={
+              rateLimitSecs > 0
+                ? `Rate limited — wait ${rateLimitSecs}s…`
+                : 'Type your message...'
+            }
             className="flex-1"
             autoComplete="off"
             value={value}
@@ -497,9 +535,15 @@ const ChatBox = ({
             type="submit"
             className="bg-[#fafafa] rounded-lg text-black min-w-[40px] text-xs"
             size="icon"
-            disabled={value.length === 0 || rateLimitSecs > 0 || isResponseLoading}
+            disabled={
+              value.length === 0 || rateLimitSecs > 0 || isResponseLoading
+            }
           >
-            {rateLimitSecs > 0 ? <span>{rateLimitSecs}s</span> : <Send className="h-4 w-4" />}
+            {rateLimitSecs > 0 ? (
+              <span>{rateLimitSecs}s</span>
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
             <span className="sr-only">Send</span>
           </Button>
         </form>
@@ -522,16 +566,21 @@ const ContentPage = () => {
   const ref = useRef(null)
 
   React.useEffect(() => {
-    const adapter = new LeetCodeAdapter()
+    const adapters = [
+      new LeetCodeAdapter(),
+      new HackerRankAdapter(),
+      new GFGAdapter(),
+    ]
+    const adapter = adapters.find((a) => a.match(window.location.href))
 
     // Initial check
-    if (adapter.match(window.location.href)) {
+    if (adapter) {
       const statement = adapter.getProblemStatement()
       if (statement) setProblemStatement(statement)
     }
 
     const observer = new MutationObserver(() => {
-      if (adapter.match(window.location.href)) {
+      if (adapter) {
         const statement = adapter.getProblemStatement()
         if (statement && statement !== problemStatement) {
           setProblemStatement(statement)
@@ -594,16 +643,15 @@ const ContentPage = () => {
         right: '30px',
       }}
     >
-      {chatboxExpanded && (
-        !model || !apiKey ? (
+      {chatboxExpanded &&
+        (!model || !apiKey ? (
           <Card className="mb-5">
             <CardContent className="h-[500px] grid place-items-center">
               <div className="grid place-items-center gap-4">
                 {!selectedModel && (
                   <>
                     <p className="text-center">
-                      Please configure the extension before using this
-                      feature.
+                      Please configure the extension before using this feature.
                     </p>
                     <Button
                       onClick={() => {
@@ -661,8 +709,7 @@ const ContentPage = () => {
             heandelModel={heandelModel}
             selectedModel={selectedModel}
           />
-        )
-      )}
+        ))}
       {/* Bot button should ALWAYS be visible */}
       <div className="flex justify-end">
         <Button
